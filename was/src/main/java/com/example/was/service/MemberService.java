@@ -7,6 +7,9 @@ import com.example.was.entity.Member;
 
 import java.util.List;
 
+/**
+ * Member Service
+ */
 @Service
 @RequiredArgsConstructor
 public class MemberService {

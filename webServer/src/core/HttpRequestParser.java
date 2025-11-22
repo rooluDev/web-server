@@ -1,10 +1,10 @@
 package core;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Locale;
-import java.util.Map;
 
+/**
+ * Http Request Parser
+ */
 public class HttpRequestParser {
 
     public static HttpRequest parse(InputStream input) throws IOException {

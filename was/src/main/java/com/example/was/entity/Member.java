@@ -3,6 +3,9 @@ package com.example.was.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Entity
+ */
 @Entity
 @Getter
 @Setter

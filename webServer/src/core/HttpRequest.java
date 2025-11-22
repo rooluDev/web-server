@@ -3,6 +3,9 @@ package core;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Http Request
+ */
 public class HttpRequest {
     private String method;
     private String path;
@@ -23,8 +26,6 @@ public class HttpRequest {
         return path;
     }
 
-
-
     public void setPath(String path) {
         this.path = path;
     }
@@ -44,7 +45,6 @@ public class HttpRequest {
     public void setQuery(String query) {
         this.query = query;
     }
-
 
     public Map<String, String> getHeaders() {
         return headers;

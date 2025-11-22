@@ -3,6 +3,9 @@ package core;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Http Utils
+ */
 public class HttpUtils {
 
     private static final Map<String, String> MIME_TYPES = new HashMap<>();
