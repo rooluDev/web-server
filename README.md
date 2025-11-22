@@ -220,39 +220,56 @@ StaticFileHandler
 ---
 ### WAS 연동 리버스 프록시로 클라이언트 요청을 Spring Boot API 서버로 전달
 
-설명필요
+웹서버에서 API 요청을 받으면 이를 내부 Spring Boot WAS로 전달하는 **리버스 프록시(reverse proxy)** 기능을 직접 구현했습니다.
 
 <details>
   <summary>코드 보기 (펼치기/접기)</summary>
 
-StaticFileHandler
+URL 설정
     
-        // 경로 설정
-        String path = request.getPath();
-        String rel = path.startsWith("/") ? path.substring(1) : path;
-        Path file = root.resolve(rel).normalize();
+        URL url = new URL(path);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(request.getMethod());
+        connection.setInstanceFollowRedirects(false);
+        connection.setUseCaches(false);
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(15000);
 
-        // 파일 크기 읽기
-        byte[] body = Files.readAllBytes(file);
+Was HttpRequest Header 설정
+        
+        // header setting
+        for (Map.Entry<String, String> header : request.getHeaders().entrySet()) {
+            if (!header.getKey().equalsIgnoreCase("Host") && !header.getKey().equalsIgnoreCase("Content-Length")) {
+                connection.setRequestProperty(header.getKey(), header.getValue());
+            }
+        }
 
-        // response 헤더 설정
-        String mime = HttpUtils.getMimeType(file.getFileName().toString());
-        String date = formatter.format(Instant.now());
-        String lastModified = formatter.format(Files.getLastModifiedTime(file).toInstant());
-        String etag = "W/\"" + body.length + "-" + Files.getLastModifiedTime(file).toMillis() + "\"";
+        // body setting
+        if (request.getMethod().equals("POST") || request.getMethod().equals("PUT") || request.getMethod().equals("PATCH")) {
+            connection.setDoOutput(true);
+            byte[] requestBody = request.getBody();
+            connection.setRequestProperty("Content-Length", String.valueOf(requestBody.length));
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(requestBody);
+            }
+        }
 
-        HttpResponse response = new HttpResponse(200, "OK");
-        response.setHeader("Date", date);
-        response.setHeader("Content-Type", mime);
-        response.setHeader("Content-Length", String.valueOf(body.length));
-        response.setHeader("Last-Modified", lastModified);
-        response.setHeader("ETag", etag);
-        response.setHeader("Cache-Control", "public, max-age=300");
-        response.setHeader("Accept-Ranges", "bytes");
-        response.setHeader("Connection", "close"); // 지금 구조에선 close가 깔끔
-        response.setBody(body);
+Was HttpResponse 호출 및 응답
 
-        return response;
+        int status = connection.getResponseCode();
+        InputStream inputStream = (status < 400) ? connection.getInputStream() : connection.getErrorStream();
+        byte[] responseBody = (inputStream != null) ? inputStream.readAllBytes() : new byte[0];
 
-  [StaticFileHandler 전체 코드](https://github.com/rooluDev/web-server/blob/main/webServer/src/handler/StaticFileHandler.java)
+        HttpResponse httpResponse = new HttpResponse(status, connection.getResponseMessage());
+
+        for (Map.Entry<String, java.util.List<String>> header : connection.getHeaderFields().entrySet()) {
+            if (header.getKey() != null && !header.getValue().isEmpty()) {
+                if (header.getKey().equalsIgnoreCase("Transfer-Encoding")
+                        || header.getKey().equalsIgnoreCase("Keep-Alive")) continue;
+
+                httpResponse.setHeader(header.getKey(), header.getValue().get(0));
+            }
+        }
+
+  [WasProxyHandler 전체 코드](https://github.com/rooluDev/web-server/blob/main/webServer/src/handler/WasProxyHandler.java)
   </details>
